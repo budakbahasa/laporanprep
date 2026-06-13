@@ -305,11 +305,11 @@
 
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
-            const gasUrl = WEB_APP_URL;
+            const gasUrl = https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec;
 
             // --- TAMBAHAN KESELAMATAN URL ---
             if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec" || !gasUrl.startsWith("http")) {
-                showToast("https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec", "error");
+                showToast("Sila masukkan URL Google Sheets yang sah pada WEB_APP_URL di dalam kod.", "error");
                 return;
             }
 
@@ -351,7 +351,7 @@
 
         // --- 5. TARIK DATA DARI GOOGLE SHEETS (GET) ---
         async function loadGoogleSheetsData() {
-            const gasUrl = WEB_APP_URL;
+            const gasUrl = https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec;
             const tbody = document.getElementById('archive-body');
             
             // --- TAMBAHAN KESELAMATAN URL ---
