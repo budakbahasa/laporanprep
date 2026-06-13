@@ -179,7 +179,7 @@
     </div>
 
     <script>
-        // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI BAWAH INI ===
+        // === URL GOOGLE SHEETS TELAH DIMASUKKAN TERUS ===
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec";
         
         // Simpan rekod global supaya data lengkap boleh diakses bila butang Papar ditekan
@@ -290,11 +290,6 @@
 
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
-            if (!WEB_APP_URL || WEB_APP_URL === "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec") {
-                showToast("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec", "error");
-                return;
-            }
-
             const btn = document.getElementById('save-btn');
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
             btn.disabled = true;
@@ -313,7 +308,7 @@
             };
 
             try {
-                await fetch("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec", {
+                await fetch(WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors', // Penting untuk elak sekatan Google
                     body: JSON.stringify(payload),
@@ -336,16 +331,10 @@
         // --- 5. TARIK DATA DARI GOOGLE SHEETS (GET) ---
         async function loadGoogleSheetsData() {
             const tbody = document.getElementById('archive-body');
-            
-            if (!WEB_APP_URL || WEB_APP_URL === "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec") {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium">Sila masukkan URL Web App dalam kod HTML.</td></tr>`;
-                return;
-            }
-
             tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-blue-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Sedang memuat turun data...</td></tr>`;
 
             try {
-                const res = await fetch("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec");
+                const res = await fetch(WEB_APP_URL);
                 const records = await res.json();
                 globalRecords = records; // Simpan untuk fungsi papar
 
