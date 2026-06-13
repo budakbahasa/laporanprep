@@ -177,7 +177,7 @@
         // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI SINI ===
         // Buang perkataan "SILA_MASUKKAN_URL_DI_SINI" dan masukkan link panjang cikgu.
         // Pastikan link masih berada di dalam tanda pembuka dan penutup kata (" ")
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
+        const WEB_APP_URL = "SILA_MASUKKAN_URL_DI_SINI";
 
         // --- 1. JANA SENARAI ITEM ---
         const ITEMS = [
@@ -255,7 +255,7 @@
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
             const gasUrl = WEB_APP_URL;
-            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec") {
+            if (!gasUrl || gasUrl === "SILA_MASUKKAN_URL_DI_SINI") {
                 showToast("Sila letak Web App URL di dalam kod HTML (WEB_APP_URL) terlebih dahulu", "error");
                 return;
             }
@@ -280,20 +280,21 @@
 
             try {
                 // Hantar ke Google Sheets
-                const response = await fetch(gasUrl, {
+                await fetch(gasUrl, {
                     method: 'POST',
+                    mode: 'no-cors', // <--- INI KUNCI PENYELESAIANNYA
                     body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' } // text/plain untuk bypass sekatan CORS browser
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
                 
                 showToast("Borang Laporan berjaya disimpan!");
                 
-                // Pilihan: Kosongkan borang selepas berjaya
-                // setTimeout(() => location.reload(), 2000); 
+                // Pilihan: Segarkan data arkib selepas 1 saat
+                setTimeout(() => loadGoogleSheetsData(), 1000); 
 
             } catch (err) {
                 console.error(err);
-                showToast("Gagal menyimpan. Pastikan URL Google Sheets anda betul.", "error");
+                showToast("Gagal menyimpan. Sila semak tetapan 'Anyone' pada Apps Script.", "error");
             } finally {
                 btn.innerHTML = `<i class="fas fa-save"></i> Simpan Laporan`;
                 btn.disabled = false;
@@ -305,7 +306,7 @@
             const gasUrl = WEB_APP_URL;
             const tbody = document.getElementById('archive-body');
             
-            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec") {
+            if (!gasUrl || gasUrl === "SILA_MASUKKAN_URL_DI_SINI") {
                 tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">URL Google Sheets belum ditanam. Sila letak link di bahagian WEB_APP_URL dalam kod HTML.</td></tr>`;
                 return;
             }
