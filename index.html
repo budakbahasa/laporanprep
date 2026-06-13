@@ -255,7 +255,7 @@
         async function saveToSheets() {
             const gasUrl = WEB_APP_URL;
             if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec") {
-                showToast("Sila letak Web App URL di dalam kod HTML (WEB_APP_URL) terlebih dahulu", "error");
+                showToast("https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec", "error");
                 return;
             }
 
@@ -304,7 +304,7 @@
             const gasUrl = WEB_APP_URL;
             const tbody = document.getElementById('archive-body');
             
-            if (!gasUrl || gasUrl === "SILA_MASUKKAN_URL_DI_SINI") {
+            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec") {
                 tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">URL Google Sheets belum ditanam. Sila letak link di bahagian WEB_APP_URL dalam kod HTML.</td></tr>`;
                 return;
             }
