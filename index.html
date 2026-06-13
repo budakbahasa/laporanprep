@@ -177,7 +177,7 @@
         // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI SINI ===
         // Buang perkataan "SILA_MASUKKAN_URL_DI_SINI" dan masukkan link panjang cikgu.
         // Pastikan link masih berada di dalam tanda pembuka dan penutup kata (" ")
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
+        const WEB_APP_URL = "SILA_MASUKKAN_URL_DI_SINI";
 
         // --- 1. JANA SENARAI ITEM ---
         const ITEMS = [
@@ -255,8 +255,10 @@
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
             const gasUrl = WEB_APP_URL;
-            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec") {
-                showToast("https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec", "error");
+            
+            // KOD DIBETULKAN: Buang semakan error yang menghalang URL cikgu
+            if (!gasUrl) {
+                showToast("Sila letak Web App URL di dalam kod HTML (WEB_APP_URL) terlebih dahulu", "error");
                 return;
             }
 
@@ -306,7 +308,8 @@
             const gasUrl = WEB_APP_URL;
             const tbody = document.getElementById('archive-body');
             
-            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec") {
+            // KOD DIBETULKAN: Buang semakan error yang menghalang URL cikgu
+            if (!gasUrl) {
                 tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">URL Google Sheets belum ditanam. Sila letak link di bahagian WEB_APP_URL dalam kod HTML.</td></tr>`;
                 return;
             }
