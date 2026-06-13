@@ -305,7 +305,7 @@
 
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
-            const gasUrl = https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec;
+            const gasUrl = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
 
             // --- TAMBAHAN KESELAMATAN URL ---
             if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec" || !gasUrl.startsWith("http")) {
@@ -351,7 +351,7 @@
 
         // --- 5. TARIK DATA DARI GOOGLE SHEETS (GET) ---
         async function loadGoogleSheetsData() {
-            const gasUrl = https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec;
+            const gasUrl = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
             const tbody = document.getElementById('archive-body');
             
             // --- TAMBAHAN KESELAMATAN URL ---
