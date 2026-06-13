@@ -7,171 +7,432 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { background-color: #f1f5f9; font-family: sans-serif; }
         @media print {
             body { background: white !important; }
             .no-print { display: none !important; }
-            #pdf-content { width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; }
+            #pdf-content { width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; margin: 0 !important;}
+            textarea { border: none !important; resize: none !important; overflow: hidden !important; background: transparent !important; }
+            input, select { border: none !important; border-bottom: 1px solid black !important; outline: none !important; background: transparent !important; appearance: none; -webkit-appearance: none; }
+            table, th, td { border-color: black !important; }
+            .print-bg-blue { background-color: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
         }
         textarea { resize: none; overflow: hidden; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #2563eb; }
     </style>
 </head>
 <body class="text-slate-900 min-h-screen p-4 md:p-8">
 
     <div class="max-w-4xl mx-auto relative">
+
+        <!-- Top Navigation -->
         <div class="no-print mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
             <h1 class="text-xl md:text-2xl font-bold text-blue-900 flex items-center gap-3">
                 <i class="fas fa-file-alt text-blue-600"></i> Laporan Prep SKPK Kuantan
             </h1>
             <div class="flex gap-2 mt-4 md:mt-0">
-                <button onclick="switchTab('form')" id="btn-form" class="px-5 py-2.5 rounded-xl font-medium bg-blue-600 text-white shadow-md">Borang</button>
-                <button onclick="switchTab('archive')" id="btn-archive" class="px-5 py-2.5 rounded-xl font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">Arkib</button>
+                <button onclick="switchTab('form')" id="btn-form" class="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-blue-600 text-white shadow-md">
+                    <i class="fas fa-edit"></i> Borang
+                </button>
+                <button onclick="switchTab('archive')" id="btn-archive" class="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+                    <i class="fas fa-archive"></i> Arkib Laporan
+                </button>
             </div>
         </div>
 
-        <div id="toast" class="no-print hidden fixed top-6 right-6 px-6 py-4 rounded-xl shadow-xl z-50 text-white font-medium bg-slate-800"></div>
+        <!-- Toast Notification -->
+        <div id="toast" class="no-print hidden fixed top-6 right-6 px-6 py-4 rounded-xl shadow-xl items-center gap-3 z-50 animate-bounce text-white font-medium bg-slate-800">
+            <!-- Isi Toast -->
+        </div>
 
+        <!-- ======================= -->
+        <!-- BAHAGIAN TAB 1: BORANG  -->
+        <!-- ======================= -->
         <div id="tab-form" class="block">
-            <div class="bg-white shadow-xl rounded-2xl p-6 md:p-10 border border-slate-200">
+            <div class="bg-white shadow-xl rounded-2xl p-6 md:p-10 relative border border-slate-200">
+                
+                <!-- Action Buttons -->
                 <div class="no-print mb-6 flex flex-wrap gap-3 justify-end bg-slate-50 p-4 rounded-xl border border-slate-100 items-center">
-                    <button onclick="resetBorang()" class="mr-auto text-slate-500 hover:text-red-600 font-medium text-sm px-3"><i class="fas fa-trash-alt"></i> Borang Baru</button>
-                    <button id="pdf-btn" onclick="generatePDF()" class="bg-red-600 text-white px-5 py-2 rounded-xl shadow-md"><i class="fas fa-file-pdf"></i> PDF</button>
-                    <button id="save-btn" onclick="saveToSheets()" class="bg-blue-600 text-white px-5 py-2 rounded-xl shadow-md"><i class="fas fa-save"></i> Simpan</button>
+                    <button onclick="resetBorang()" class="mr-auto text-slate-500 hover:text-red-600 font-medium text-sm flex items-center gap-2 px-3 transition">
+                        <i class="fas fa-trash-alt"></i> Borang Baru (Kosong)
+                    </button>
+                    <button id="pdf-btn" onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
+                        <i class="fas fa-file-pdf"></i> Muat Turun PDF
+                    </button>
+                    <button id="save-btn" onclick="saveToSheets()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
+                        <i class="fas fa-save"></i> Simpan Laporan
+                    </button>
                 </div>
 
+                <!-- PDF Area (Ruangan ini akan di capture sbg PDF) -->
                 <div id="pdf-content" class="bg-white text-black md:p-4">
+                    
                     <div class="text-center mb-10">
-                        <h1 class="text-2xl font-bold uppercase tracking-widest">Laporan Prep Asrama</h1>
-                        <h2 class="text-xl font-bold uppercase mt-2">SK Pendidikan Khas Kuantan</h2>
+                        <h1 class="text-2xl md:text-3xl font-bold uppercase text-black tracking-widest">Laporan Prep Asrama</h1>
+                        <h2 class="text-xl md:text-2xl font-bold uppercase text-slate-800 mt-2">SK Pendidikan Khas Kuantan</h2>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-8 text-sm md:text-base">
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Hari</label><select id="hari" class="flex-1 border-b border-slate-400 bg-transparent"><option value="">Pilih</option><option value="Isnin">Isnin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option><option value="Khamis">Khamis</option><option value="Jumaat">Jumaat</option><option value="Sabtu">Sabtu</option><option value="Ahad">Ahad</option></select></div>
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Tempat</label><input type="text" id="tempat" value="Asrama SK Pendidikan Khas Kuantan" class="flex-1 border-b border-slate-400 bg-transparent"></div>
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Tarikh</label><input type="date" id="tarikh" class="flex-1 border-b border-slate-400 bg-transparent"></div>
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Kehadiran</label><input type="text" id="kehadiran" class="flex-1 border-b border-slate-400 bg-transparent"></div>
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Masa</label><input type="time" id="masa" class="flex-1 border-b border-slate-400 bg-transparent"></div>
-                        <div class="flex items-center"><label class="w-32 font-bold uppercase">Guru/Warden</label><input type="text" id="guru" class="flex-1 border-b border-slate-400 bg-transparent"></div>
+                    <!-- Maklumat Asas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5 mb-8 text-sm md:text-base">
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Hari</label><span class="mr-2 font-bold">:</span>
+                            <select id="hari" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                                <option value="">Pilih</option><option value="Isnin">Isnin</option><option value="Selasa">Selasa</option>
+                                <option value="Rabu">Rabu</option><option value="Khamis">Khamis</option><option value="Jumaat">Jumaat</option>
+                                <option value="Sabtu">Sabtu</option><option value="Ahad">Ahad</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Tempat</label><span class="mr-2 font-bold">:</span>
+                            <input type="text" id="tempat" value="Asrama SK Pendidikan Khas Kuantan" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Tarikh</label><span class="mr-2 font-bold">:</span>
+                            <input type="date" id="tarikh" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Kehadiran</label><span class="mr-2 font-bold">:</span>
+                            <input type="text" id="kehadiran" placeholder="Cth: 40/45" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Masa</label><span class="mr-2 font-bold">:</span>
+                            <input type="time" id="masa" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-32 font-bold uppercase">Guru/Warden</label><span class="mr-2 font-bold">:</span>
+                            <input type="text" id="guru" class="flex-1 border-b-2 border-slate-300 py-1 bg-transparent font-medium text-slate-800">
+                        </div>
                     </div>
 
+                    <!-- Jadual Perkara Pemantauan -->
                     <table class="w-full border-collapse border border-slate-900 mb-8">
-                        <tbody id="table-body"></tbody>
+                        <thead>
+                            <tr class="print-bg-blue bg-blue-900 text-white">
+                                <th class="border border-slate-900 p-3 w-12 text-center font-bold">BIL</th>
+                                <th class="border border-slate-900 p-3 text-center font-bold uppercase">Perkara Pemantauan</th>
+                                <th class="border border-slate-900 p-3 w-[45%] text-center font-bold uppercase">Catatan / Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- JS akan isi baris di sini -->
+                        </tbody>
                     </table>
 
-                    <div class="border border-slate-900 p-5 mb-10 bg-slate-50">
-                        <label class="font-bold uppercase block mb-3">Rumusan / Catatan Am:</label>
-                        <textarea id="rumusan" class="w-full min-h-[90px] border-none bg-transparent outline-none"></textarea>
+                    <!-- Rumusan -->
+                    <div class="border border-slate-900 p-5 mb-10 bg-slate-50/50">
+                        <label class="font-bold uppercase block mb-3 text-slate-900 tracking-wide">Rumusan / Catatan Am:</label>
+                        <textarea id="rumusan" class="w-full min-h-[90px] border-none bg-transparent outline-none leading-relaxed" placeholder="Taipkan rumusan am di sini..." oninput="autoResize(this)"></textarea>
                     </div>
-                </div>
+
+                    <!-- Disediakan Oleh -->
+                    <div class="mt-8 break-inside-avoid">
+                        <p class="font-bold mb-6 uppercase text-slate-900 tracking-wide">Disediakan oleh:</p>
+                        <div class="flex items-end mb-4">
+                            <label class="w-24 font-bold text-slate-800">Nama</label><span class="mr-3 font-bold">:</span>
+                            <input type="text" id="disediakanOlehNama" class="border-b border-slate-500 outline-none w-64 bg-transparent font-medium text-slate-800">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="w-24 font-bold text-slate-800">Jawatan</label><span class="mr-3 font-bold">:</span>
+                            <input type="text" id="disediakanOlehJawatan" value="Guru / Warden Bertugas" class="border-b border-slate-500 outline-none w-64 bg-transparent font-medium text-slate-800">
+                        </div>
+                    </div>
+
+                </div> <!-- End PDF Content -->
             </div>
         </div>
 
+        <!-- ======================= -->
+        <!-- BAHAGIAN TAB 2: ARKIB   -->
+        <!-- ======================= -->
         <div id="tab-archive" class="hidden">
             <div class="bg-white shadow-xl rounded-2xl p-6 md:p-8 border border-slate-200">
-                <button onclick="loadGoogleSheetsData()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl"><i class="fas fa-sync-alt"></i> Muat Semula Data</button>
-                <div class="overflow-x-auto mt-6">
-                    <table class="w-full border-collapse">
-                        <thead><tr class="bg-slate-100"><th class="p-4">Tarikh</th><th class="p-4">Guru</th><th class="p-4">Tindakan</th></tr></thead>
-                        <tbody id="archive-body"></tbody>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-database text-blue-600"></i> Arkib Laporan
+                    </h2>
+                    <button onclick="loadGoogleSheetsData()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
+                        <i class="fas fa-sync-alt"></i> Muat Semula Data
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200">
+                                <th class="p-4 font-bold text-slate-700 text-sm">Tarikh</th>
+                                <th class="p-4 font-bold text-slate-700 text-sm">Hari</th>
+                                <th class="p-4 font-bold text-slate-700 text-sm">Guru Bertugas</th>
+                                <th class="p-4 font-bold text-slate-700 text-sm text-center">Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archive-body">
+                            <!-- Data Arkib Akan Masuk Sini -->
+                            <tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Sila tekan 'Muat Semula Data'</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
     </div>
 
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
+        // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI BAWAH INI ===
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec";
+        
+        // Simpan rekod global supaya data lengkap boleh diakses bila butang Papar ditekan
         let globalRecords = [];
-        const ITEMS = ["Kehadiran murid", "Membuat kerja sekolah", "Membaca bahan ilmiah", "Membawa buku", "Disiplin", "Kebersihan diri", "Kesihatan murid", "Catatan kes khas"];
 
+        // --- 1. JANA SENARAI ITEM PEMANTAUAN ---
+        const ITEMS = [
+            "Kehadiran murid", "Membuat kerja sekolah / latihan yang diberi", "Membaca bahan ilmiah / bahan bacaan",
+            "Membawa buku / bahan yang diperlukan", "Disiplin semasa prep (Duduk dengan tertib, tidak bising, tidak keluar tempat tanpa kebenaran)",
+            "Kebersihan diri dan pakaian", "Kesihatan murid", "Catatan kes khas / lain-lain"
+        ];
+        
+        let tableHTML = '';
         ITEMS.forEach((item, index) => {
-            document.getElementById('table-body').innerHTML += `
-            <tr class="border-b border-slate-900">
-                <td class="border-r border-slate-900 p-3 text-center font-bold">${index + 1}</td>
-                <td class="border-r border-slate-900 p-3">${item}</td>
-                <td class="p-0"><textarea id="catatan-${index}" class="w-full p-3 outline-none bg-transparent"></textarea></td>
+            tableHTML += `
+            <tr class="hover:bg-slate-50 border-b border-slate-300 print-row-break">
+                <td class="border-x border-slate-900 p-4 text-center font-bold text-slate-800 align-top">${index + 1}</td>
+                <td class="border-r border-slate-900 p-4 text-slate-900 font-medium leading-snug align-top">${item}</td>
+                <td class="border-r border-slate-900 p-0 align-top">
+                    <textarea id="catatan-${index}" class="w-full h-full min-h-[70px] p-4 outline-none bg-transparent leading-relaxed" oninput="autoResize(this)" placeholder="Tiada catatan..."></textarea>
+                </td>
             </tr>`;
         });
+        document.getElementById('table-body').innerHTML = tableHTML;
 
-        function showToast(msg) {
+        // --- 2. KAWALAN UI & TOAST ---
+        function autoResize(el) { 
+            if(!el) return;
+            el.style.height = 'auto'; 
+            el.style.height = el.scrollHeight + 'px'; 
+        }
+
+        function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
+            const icon = type === 'success' ? 'fa-check-circle text-green-400' : 'fa-exclamation-circle text-red-400';
+            const bg = type === 'success' ? 'bg-slate-800' : 'bg-red-900';
+            
+            toast.className = `no-print fixed top-6 right-6 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce text-white font-medium ${bg}`;
+            toast.innerHTML = `<i class="fas ${icon} text-xl"></i> <span>${msg}</span>`;
+            
+            setTimeout(() => { toast.classList.add('hidden'); toast.classList.remove('flex'); }, 4000);
         }
 
         function switchTab(tab) {
             document.getElementById('tab-form').style.display = tab === 'form' ? 'block' : 'none';
             document.getElementById('tab-archive').style.display = tab === 'archive' ? 'block' : 'none';
-            if(tab === 'archive') loadGoogleSheetsData();
+            
+            const btnForm = document.getElementById('btn-form');
+            const btnArchive = document.getElementById('btn-archive');
+            
+            if (tab === 'form') {
+                btnForm.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-blue-600 text-white shadow-md";
+                btnArchive.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+            } else {
+                btnForm.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+                btnArchive.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-blue-600 text-white shadow-md";
+                loadGoogleSheetsData(); 
+            }
         }
 
         function resetBorang() {
-            location.reload();
+            if(confirm("Adakah anda pasti untuk kosongkan borang dan mulakan laporan baru?")) {
+                document.getElementById('hari').value = '';
+                document.getElementById('tarikh').value = '';
+                document.getElementById('masa').value = '';
+                document.getElementById('tempat').value = 'Asrama SK Pendidikan Khas Kuantan';
+                document.getElementById('kehadiran').value = '';
+                document.getElementById('guru').value = '';
+                document.getElementById('disediakanOlehNama').value = '';
+                document.getElementById('disediakanOlehJawatan').value = 'Guru / Warden Bertugas';
+                
+                let rumusanEl = document.getElementById('rumusan');
+                rumusanEl.value = '';
+                rumusanEl.style.height = '90px'; // reset height
+
+                for(let i=0; i<8; i++) {
+                    let catEl = document.getElementById(`catatan-${i}`);
+                    catEl.value = '';
+                    catEl.style.height = '70px'; // reset height
+                }
+                showToast("Borang telah dikosongkan.");
+            }
         }
 
-        async function saveToSheets() {
-            const btn = document.getElementById('save-btn');
+        // --- 3. MUAT TURUN PDF ---
+        function generatePDF() {
+            const btn = document.getElementById('pdf-btn');
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menjana...`;
             btn.disabled = true;
+
+            const element = document.getElementById('pdf-content');
+            let dateVal = document.getElementById('tarikh').value || 'Baru';
+            
+            const opt = {
+                margin: 10,
+                filename: `Laporan_Prep_${dateVal}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                btn.innerHTML = `<i class="fas fa-file-pdf"></i> Muat Turun PDF`;
+                btn.disabled = false;
+                showToast("Berjaya! Sila semak folder Download komputer/telefon anda.");
+            });
+        }
+
+        // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
+        async function saveToSheets() {
+            if (!WEB_APP_URL || WEB_APP_URL === "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec") {
+                showToast("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec", "error");
+                return;
+            }
+
+            const btn = document.getElementById('save-btn');
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
+            btn.disabled = true;
+
             const payload = {
                 tarikh: document.getElementById('tarikh').value,
                 hari: document.getElementById('hari').value,
                 masa: document.getElementById('masa').value,
-                guru: document.getElementById('guru').value,
+                tempat: document.getElementById('tempat').value,
                 kehadiran: document.getElementById('kehadiran').value,
+                guru: document.getElementById('guru').value,
                 catatan: Array.from({length: 8}).map((_, i) => document.getElementById(`catatan-${i}`).value),
-                rumusan: document.getElementById('rumusan').value
+                rumusan: document.getElementById('rumusan').value,
+                disediakanOlehNama: document.getElementById('disediakanOlehNama').value,
+                disediakanOlehJawatan: document.getElementById('disediakanOlehJawatan').value,
             };
-            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-            showToast("Berjaya Disimpan!");
-            btn.disabled = false;
+
+            try {
+                await fetch("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec", {
+                    method: 'POST',
+                    mode: 'no-cors', // Penting untuk elak sekatan Google
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                
+                showToast("Laporan telah berjaya disimpan ke pangkalan data!");
+                // Automatik load data baru bila buka arkib
+                globalRecords = []; 
+
+            } catch (err) {
+                console.error(err);
+                showToast("Ralat. Sila semak tetapan kebenaran Google Sheet.", "error");
+            } finally {
+                btn.innerHTML = `<i class="fas fa-save"></i> Simpan Laporan`;
+                btn.disabled = false;
+            }
         }
 
+        // --- 5. TARIK DATA DARI GOOGLE SHEETS (GET) ---
         async function loadGoogleSheetsData() {
             const tbody = document.getElementById('archive-body');
-            tbody.innerHTML = "<tr><td colspan='3' class='p-4 text-center'>Memuatkan...</td></tr>";
+            
+            if (!WEB_APP_URL || WEB_APP_URL === "https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec") {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium">Sila masukkan URL Web App dalam kod HTML.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-blue-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Sedang memuat turun data...</td></tr>`;
+
             try {
-                const res = await fetch(WEB_APP_URL);
-                globalRecords = await res.json();
-                tbody.innerHTML = globalRecords.map((r, i) => `
-                    <tr class="border-b">
-                        <td class="p-4">${r.tarikh || '-'}</td>
-                        <td class="p-4">${r.guru || '-'}</td>
-                        <td class="p-4"><button onclick="paparLaporanLama(${i})" class="bg-blue-600 text-white px-3 py-1 rounded">Papar</button></td>
-                    </tr>`).join('');
+                const res = await fetch("https://script.google.com/macros/s/AKfycbzQSI_Kayc-4-uZlxRfEmQrejIlnu_hwIBrPtqWoyfDDA1DsA8i07K_8sU4UeQAa0Ll/exec");
+                const records = await res.json();
+                globalRecords = records; // Simpan untuk fungsi papar
+
+                if (!records || records.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Tiada laporan dijumpai.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                records.forEach((r, index) => {
+                    // Buang format masa tambahan pada hujung tarikh jika ada (contoh: 2023-10-10T15:00:00.000Z)
+                    let cleanDate = r.tarikh || '-';
+                    if(cleanDate.includes('T')) cleanDate = cleanDate.split('T')[0];
+
+                    html += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-4 font-medium text-slate-800">${cleanDate}</td>
+                        <td class="p-4 text-slate-600">${r.hari || '-'}</td>
+                        <td class="p-4 text-slate-800 font-medium">${r.guru || '-'}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="paparLaporanLama(${index})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 mx-auto shadow-sm">
+                                <i class="fas fa-eye"></i> Papar & Cetak
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+
             } catch (err) {
-                tbody.innerHTML = "<tr><td colspan='3' class='p-4 text-center text-red-500'>Ralat ketika memuatkan data.</td></tr>";
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Gagal memuat data dari Arkib. Pastikan format JSON Apps Script betul.</td></tr>`;
             }
         }
 
-        function paparLaporanLama(i) {
-            const r = globalRecords[i];
+        // --- 6. ISI SEMULA BORANG DARI ARKIB (PAPAR) ---
+        function paparLaporanLama(index) {
+            const r = globalRecords[index];
             if (!r) return;
 
-            document.getElementById('tarikh').value = r.tarikh || '';
+            // Pembersihan Tarikh
+            let rawTarikh = r.tarikh || '';
+            if (rawTarikh.includes('T')) rawTarikh = rawTarikh.split('T')[0];
+
+            // Assign Data ke Borang Input
+            document.getElementById('tarikh').value = rawTarikh;
             document.getElementById('hari').value = r.hari || '';
+            document.getElementById('masa').value = r.masa || '';
+            document.getElementById('tempat').value = r.tempat || 'Asrama SK Pendidikan Khas Kuantan';
+            document.getElementById('kehadiran').value = r.kehadiran || '';
             document.getElementById('guru').value = r.guru || '';
-            document.getElementById('rumusan').value = r.rumusan || '';
             
-            let catatanArr = [];
+            // Assign Rumusan
+            let rumusanEl = document.getElementById('rumusan');
+            rumusanEl.value = r.rumusan || '';
+            autoResize(rumusanEl); // adjust size box
+
+            // Assign Disediakan Oleh
+            document.getElementById('disediakanOlehNama').value = r.disediakanOlehNama || '';
+            document.getElementById('disediakanOlehJawatan').value = r.disediakanOlehJawatan || 'Guru / Warden Bertugas';
+
+            // Assign Catatan (8 Item) - Ambil kira pelbagai jenis format data dari Google Sheets
+            let catatanArray = [];
             if (r.catatan) {
                 if (Array.isArray(r.catatan)) {
-                    catatanArr = r.catatan;
+                    catatanArray = r.catatan; // Format baru (Array)
                 } else if (typeof r.catatan === 'string') {
-                    try { catatanArr = JSON.parse(r.catatan); } catch(e) {}
+                    try { 
+                        catatanArray = JSON.parse(r.catatan); // Kalau ia tersimpan sebagai string JSON
+                    } catch(e) {
+                        catatanArray = [r.catatan]; // Kalau string biasa, letak di kotak pertama
+                    }
                 }
             }
-            
+
+            // Masukkan setiap nota ke dalam textarea masing-masing
             for (let idx = 0; idx < 8; idx++) {
                 const el = document.getElementById(`catatan-${idx}`);
-                if (el) el.value = catatanArr[idx] || '';
+                if (el) {
+                    el.value = catatanArray[idx] || '';
+                    autoResize(el); // adjust size box
+                }
             }
-            
-            switchTab('form');
-        }
 
-        function generatePDF() { html2pdf().from(document.getElementById('pdf-content')).save(); }
+            // Tunjuk Tab Borang
+            switchTab('form');
+            showToast("Berjaya! Laporan lama telah dimuatkan. Anda boleh ubah dan tekan Simpan, atau terus Muat Turun PDF.");
+        }
     </script>
 </body>
 </html>
