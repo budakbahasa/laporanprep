@@ -38,7 +38,7 @@
                     <i class="fas fa-edit"></i> Borang
                 </button>
                 <button onclick="switchTab('archive')" id="btn-archive" class="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
-                    <i class="fas fa-archive"></i> Arkib Google Sheets
+                    <i class="fas fa-archive"></i> Arkib Laporan
                 </button>
             </div>
         </div>
@@ -59,8 +59,9 @@
                     <button id="pdf-btn" onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
                         <i class="fas fa-file-pdf"></i> Muat Turun PDF
                     </button>
+                    <!-- BUTANG SIMPAN TELAH DIKEMASKINI -->
                     <button id="save-btn" onclick="saveToSheets()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
-                        <i class="fas fa-paper-plane"></i> Hantar ke Sheets
+                        <i class="fas fa-save"></i> Simpan Laporan
                     </button>
                 </div>
 
@@ -144,7 +145,7 @@
             <div class="bg-white shadow-xl rounded-2xl p-6 md:p-8 border border-slate-200">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fas fa-database text-blue-600"></i> Data Google Sheets
+                        <i class="fas fa-database text-blue-600"></i> Pangkalan Data
                     </h2>
                     <button onclick="loadGoogleSheetsData()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
                         <i class="fas fa-sync-alt"></i> Muat Semula Data
@@ -176,7 +177,7 @@
         // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI SINI ===
         // Buang perkataan "SILA_MASUKKAN_URL_DI_SINI" dan masukkan link panjang cikgu.
         // Pastikan link masih berada di dalam tanda pembuka dan penutup kata (" ")
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/execI";
 
         // --- 1. JANA SENARAI ITEM ---
         const ITEMS = [
@@ -255,12 +256,12 @@
         async function saveToSheets() {
             const gasUrl = WEB_APP_URL;
             if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec") {
-                showToast("https://script.google.com/macros/s/AKfycbzeW8ZFO4t8qBoVr2vdpPvymAWAISuyu2_k-DwrA0DSo-lURimhQqrczTruWPyR0V_K/exec", "error");
+                showToast("Sila letak Web App URL di dalam kod HTML (WEB_APP_URL) terlebih dahulu", "error");
                 return;
             }
 
             const btn = document.getElementById('save-btn');
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menghantar...`;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
             btn.disabled = true;
 
             // Kumpul semua data borang
@@ -285,16 +286,16 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' } // text/plain untuk bypass sekatan CORS browser
                 });
                 
-                showToast("Data selamat dihantar terus ke Google Sheets!");
+                showToast("Borang Laporan berjaya disimpan!");
                 
                 // Pilihan: Kosongkan borang selepas berjaya
                 // setTimeout(() => location.reload(), 2000); 
 
             } catch (err) {
                 console.error(err);
-                showToast("Gagal hantar. Pastikan URL Google Sheets anda betul.", "error");
+                showToast("Gagal menyimpan. Pastikan URL Google Sheets anda betul.", "error");
             } finally {
-                btn.innerHTML = `<i class="fas fa-paper-plane"></i> Hantar ke Sheets`;
+                btn.innerHTML = `<i class="fas fa-save"></i> Simpan Laporan`;
                 btn.disabled = false;
             }
         }
@@ -309,14 +310,14 @@
                 return;
             }
 
-            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-blue-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Sedang memuat turun data dari Google Sheets...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-blue-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Sedang memuat turun data...</td></tr>`;
 
             try {
                 const res = await fetch(gasUrl);
                 const records = await res.json();
 
                 if (records.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Tiada laporan dijumpai dalam Google Sheets.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Tiada laporan dijumpai.</td></tr>`;
                     return;
                 }
 
@@ -333,7 +334,7 @@
                 tbody.innerHTML = html;
 
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Ralat sambungan. Pastikan *Who has access* disetkan kepada *Anyone* pada fail Google Apps Script cikgu.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Ralat sambungan. Pastikan fail Apps Script disetkan kepada *Anyone*.</td></tr>`;
             }
         }
     </script>
