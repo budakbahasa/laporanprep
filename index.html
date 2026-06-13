@@ -4,22 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Laporan Prep Asrama</title>
-    <!-- Tailwind CSS untuk Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html2pdf untuk PDF Cetak A4 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- FontAwesome untuk Ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body { background-color: #f1f5f9; font-family: sans-serif; }
-        /* Tetapan Khas untuk PDF / Cetakan A4 */
         @media print {
             body { background: white !important; }
             .no-print { display: none !important; }
             #pdf-content { width: 100%; padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-        /* Style supaya textarea nampak kemas */
         textarea { resize: none; overflow: hidden; }
         input:focus, textarea:focus { outline: none; }
     </style>
@@ -55,17 +50,22 @@
             <div class="bg-white shadow-xl rounded-2xl p-6 md:p-10 relative border border-slate-200">
                 
                 <!-- Action Buttons -->
-                <div class="no-print mb-6 flex flex-wrap gap-3 justify-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div class="no-print mb-6 flex flex-wrap gap-3 justify-end bg-slate-50 p-4 rounded-xl border border-slate-100 items-center">
+                    
+                    <!-- Butang Clear Form -->
+                    <button onclick="resetBorang()" class="mr-auto text-slate-500 hover:text-red-600 font-medium text-sm flex items-center gap-2 px-3">
+                        <i class="fas fa-trash-alt"></i> Borang Baru (Kosong)
+                    </button>
+
                     <button id="pdf-btn" onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
                         <i class="fas fa-file-pdf"></i> Muat Turun PDF
                     </button>
-                    <!-- BUTANG SIMPAN TELAH DIKEMASKINI -->
                     <button id="save-btn" onclick="saveToSheets()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
                         <i class="fas fa-save"></i> Simpan Laporan
                     </button>
                 </div>
 
-                <!-- PDF Area (Ruangan ini akan di capture sbg PDF) -->
+                <!-- PDF Area -->
                 <div id="pdf-content" class="bg-white text-black md:p-4">
                     
                     <div class="text-center mb-10">
@@ -134,7 +134,7 @@
                         </div>
                     </div>
 
-                </div> <!-- End PDF Content -->
+                </div>
             </div>
         </div>
 
@@ -145,7 +145,7 @@
             <div class="bg-white shadow-xl rounded-2xl p-6 md:p-8 border border-slate-200">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fas fa-database text-blue-600"></i> Pangkalan Data
+                        <i class="fas fa-database text-blue-600"></i> Arkib Laporan
                     </h2>
                     <button onclick="loadGoogleSheetsData()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
                         <i class="fas fa-sync-alt"></i> Muat Semula Data
@@ -159,11 +159,11 @@
                                 <th class="p-4 font-bold text-slate-700 text-sm">Tarikh</th>
                                 <th class="p-4 font-bold text-slate-700 text-sm">Hari</th>
                                 <th class="p-4 font-bold text-slate-700 text-sm">Guru Bertugas</th>
-                                <th class="p-4 font-bold text-slate-700 text-sm">Kehadiran</th>
+                                <th class="p-4 font-bold text-slate-700 text-sm text-center">Tindakan</th>
                             </tr>
                         </thead>
                         <tbody id="archive-body">
-                            <!-- Data Arkib Akan Masuk Sini -->
+                            <!-- Data Arkib -->
                             <tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Sila tekan 'Muat Semula Data'</td></tr>
                         </tbody>
                     </table>
@@ -174,10 +174,12 @@
     </div>
 
     <script>
-        // === MASUKKAN LINK GOOGLE SHEETS CIKGU DI SINI ===
-        // Buang perkataan "SILA_MASUKKAN_URL_DI_SINI" dan masukkan link panjang cikgu.
-        // Pastikan link masih berada di dalam tanda pembuka dan penutup kata (" ")
+        // === MASUKKAN LINK WEB APP URL YANG BARU DI SINI ===
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec";
+        // ===================================================
+
+        // Simpan rekod secara global supaya boleh dibaca bila tekan butang Papar PDF
+        let globalRecords = [];
 
         // --- 1. JANA SENARAI ITEM ---
         const ITEMS = [
@@ -226,8 +228,57 @@
             } else {
                 btnForm.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-100 text-slate-600 hover:bg-slate-200";
                 btnArchive.className = "px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-blue-600 text-white shadow-md";
-                loadGoogleSheetsData(); // Autoload bila masuk tab arkib
+                loadGoogleSheetsData(); 
             }
+        }
+
+        function resetBorang() {
+            if(confirm("Adakah anda pasti untuk padam isi borang ini dan mula borang baru?")) {
+                document.getElementById('hari').value = '';
+                document.getElementById('tarikh').value = '';
+                document.getElementById('masa').value = '';
+                document.getElementById('kehadiran').value = '';
+                document.getElementById('guru').value = '';
+                document.getElementById('disediakanOlehNama').value = '';
+                document.getElementById('rumusan').value = '';
+                for(let i=0; i<8; i++) {
+                    document.getElementById(`catatan-${i}`).value = '';
+                }
+                showToast("Borang telah dikosongkan.");
+            }
+        }
+
+        // --- BUKA LAPORAN LAMA UNTUK CETAK PDF ---
+        function paparLaporanLama(index) {
+            const r = globalRecords[index];
+            if(!r) return;
+
+            // Masukkan data balik ke dalam borang
+            document.getElementById('tarikh').value = r.tarikh ? r.tarikh.substring(0, 10) : ''; 
+            document.getElementById('hari').value = r.hari || '';
+            document.getElementById('masa').value = r.masa || '';
+            document.getElementById('tempat').value = r.tempat || 'Asrama SK Pendidikan Khas Kuantan';
+            document.getElementById('kehadiran').value = r.kehadiran || '';
+            document.getElementById('guru').value = r.guru || '';
+            
+            if(r.catatan) {
+                for(let i=0; i<8; i++) {
+                    let el = document.getElementById(`catatan-${i}`);
+                    el.value = r.catatan[i] || '';
+                    autoResize(el);
+                }
+            }
+            
+            let rumusanEl = document.getElementById('rumusan');
+            rumusanEl.value = r.rumusan || '';
+            autoResize(rumusanEl);
+
+            document.getElementById('disediakanOlehNama').value = r.disediakanOlehNama || '';
+            document.getElementById('disediakanOlehJawatan').value = r.disediakanOlehJawatan || 'Guru / Warden Bertugas';
+
+            // Lompat ke tab borang
+            switchTab('form');
+            showToast("Laporan lama dibuka. Anda boleh tekan 'Muat Turun PDF' sekarang.");
         }
 
         // --- 3. MUAT TURUN PDF ---
@@ -255,9 +306,9 @@
         // --- 4. HANTAR DATA KE GOOGLE SHEETS (POST) ---
         async function saveToSheets() {
             const gasUrl = WEB_APP_URL;
-            
-            // KOD DIBETULKAN: Buang semakan error yang menghalang URL cikgu
-            if (!gasUrl) {
+
+            // --- TAMBAHAN KESELAMATAN URL ---
+            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec" || !gasUrl.startsWith("http")) {
                 showToast("https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec", "error");
                 return;
             }
@@ -266,7 +317,6 @@
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
             btn.disabled = true;
 
-            // Kumpul semua data borang
             const payload = {
                 hari: document.getElementById('hari').value,
                 tarikh: document.getElementById('tarikh').value,
@@ -281,22 +331,18 @@
             };
 
             try {
-                // Hantar ke Google Sheets
                 await fetch(gasUrl, {
                     method: 'POST',
-                    mode: 'no-cors', // <--- INI KUNCI PENYELESAIANNYA
+                    mode: 'no-cors', 
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
                 
-                showToast("Borang Laporan berjaya disimpan!");
-                
-                // Pilihan: Segarkan data arkib selepas 1 saat
+                showToast("Laporan berjaya disimpan ke pangkalan data!");
                 setTimeout(() => loadGoogleSheetsData(), 1000); 
 
             } catch (err) {
                 console.error(err);
-                showToast("Gagal menyimpan. Sila semak tetapan 'Anyone' pada Apps Script.", "error");
             } finally {
                 btn.innerHTML = `<i class="fas fa-save"></i> Simpan Laporan`;
                 btn.disabled = false;
@@ -308,9 +354,9 @@
             const gasUrl = WEB_APP_URL;
             const tbody = document.getElementById('archive-body');
             
-            // KOD DIBETULKAN: Buang semakan error yang menghalang URL cikgu
-            if (!gasUrl) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">URL Google Sheets belum ditanam. Sila letak link di bahagian WEB_APP_URL dalam kod HTML.</td></tr>`;
+            // --- TAMBAHAN KESELAMATAN URL ---
+            if (!gasUrl || gasUrl === "https://script.google.com/macros/s/AKfycbyRlvdbwdRoa4DQmMLYYS5uooW6cbGH5gJgmFJHgmRX6SbS8IBluKTmLxTy3Qdgt55G/exec" || !gasUrl.startsWith("http")) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium">Sila masukkan URL Web App pada kod sumber (WEB_APP_URL) terlebih dahulu.</td></tr>`;
                 return;
             }
 
@@ -318,27 +364,36 @@
 
             try {
                 const res = await fetch(gasUrl);
-                const records = await res.json();
+                globalRecords = await res.json(); // Simpan ke pembolehubah global
 
-                if (records.length === 0) {
+                if (globalRecords.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500 font-medium">Tiada laporan dijumpai.</td></tr>`;
                     return;
                 }
 
                 let html = '';
-                records.forEach(r => {
+                // Looping menggunakan index supaya kita tahu rekod mana nak dibuka nanti
+                globalRecords.forEach((r, index) => {
+                    // Paparan format tarikh yang lebih kemas
+                    let tarikhPapar = r.tarikh;
+                    if(tarikhPapar && tarikhPapar.includes('T')) tarikhPapar = tarikhPapar.substring(0, 10);
+
                     html += `
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-4 font-medium text-slate-800">${r.tarikh || '-'}</td>
+                        <td class="p-4 font-medium text-slate-800">${tarikhPapar || '-'}</td>
                         <td class="p-4 text-slate-600">${r.hari || '-'}</td>
                         <td class="p-4 text-slate-800 font-medium">${r.guru || '-'}</td>
-                        <td class="p-4 text-slate-600">${r.kehadiran || '-'}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="paparLaporanLama(${index})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 mx-auto shadow-sm">
+                                <i class="fas fa-eye"></i> Papar & Cetak
+                            </button>
+                        </td>
                     </tr>`;
                 });
                 tbody.innerHTML = html;
 
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Ralat sambungan. Pastikan fail Apps Script disetkan kepada *Anyone*.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Gagal memuat data dari Arkib.</td></tr>`;
             }
         }
     </script>
