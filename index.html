@@ -1,0 +1,545 @@
+import React, { useState, useEffect } from 'react';
+import { Save, FileDown, Archive, FileText, Download, Trash2, Edit, CheckCircle, AlertCircle, Copy, Settings, X } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+
+// --- Firebase Initialization ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = Object.keys(firebaseConfig).length > 0 ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'laporan-prep-skpk';
+
+// --- Constants ---
+const ITEMS = [
+  "Kehadiran murid",
+  "Membuat kerja sekolah / latihan yang diberi",
+  "Membaca bahan ilmiah / bahan bacaan",
+  "Membawa buku / bahan yang diperlukan",
+  "Disiplin semasa prep (Duduk dengan tertib, tidak bising, tidak keluar tempat tanpa kebenaran)",
+  "Kebersihan diri dan pakaian",
+  "Kesihatan murid",
+  "Catatan kes khas / lain-lain"
+];
+
+const INITIAL_FORM = {
+  hari: '',
+  tarikh: '',
+  masa: '',
+  tempat: 'Asrama SK Pendidikan Khas Kuantan',
+  kehadiran: '',
+  guru: '',
+  catatan: Array(8).fill(''),
+  rumusan: '',
+  disediakanOlehNama: '',
+  disediakanOlehJawatan: 'Guru / Warden Bertugas'
+};
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [tab, setTab] = useState('form');
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [reports, setReports] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [toast, setToast] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, idToDelete: null });
+
+  // --- TAMBAHAN UNTUK GOOGLE SHEETS ---
+  const [gasUrl, setGasUrl] = useState(localStorage.getItem('gasUrl') || '');
+  const [showSettings, setShowSettings] = useState(false);
+
+  // --- Auth Setup ---
+  useEffect(() => {
+    if (!auth) return;
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // --- Data Fetching (Real-time Archive) ---
+  useEffect(() => {
+    if (!user || !db) return;
+    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'laporan_prep');
+    
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      data.sort((a, b) => b.timestamp - a.timestamp);
+      setReports(data);
+    }, (error) => {
+      console.error("Firestore error:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // --- Helpers ---
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 4000);
+  };
+
+  const autoResize = (e) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = (e.target.scrollHeight) + 'px';
+  };
+
+  const updateForm = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateCatatan = (index, value) => {
+    const newCatatan = [...form.catatan];
+    newCatatan[index] = value;
+    setForm(prev => ({ ...prev, catatan: newCatatan }));
+  };
+
+  // --- Save Logic ---
+  const handleSave = async () => {
+    if (!user || !db) {
+      showToast("Ralat: Pangkalan data belum bersedia.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'laporan_prep');
+      if (editingId) {
+        await updateDoc(doc(colRef, editingId), { ...form, updatedAt: Date.now() });
+      } else {
+        await addDoc(colRef, { ...form, timestamp: Date.now() });
+      }
+
+      // --- AUTO SEND TO GOOGLE SHEETS ---
+      if (gasUrl) {
+        try {
+          await fetch(gasUrl, {
+            method: 'POST',
+            body: JSON.stringify(form),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+          });
+          showToast("Laporan dikemaskini & Dihantar secara Auto ke Google Sheets!");
+        } catch (e) {
+          console.error("Sheet error:", e);
+          showToast("Disimpan ke arkib, tapi gagal dihantar ke Google Sheets.");
+        }
+      } else {
+         showToast(editingId ? "Laporan dikemaskini!" : "Laporan baru disimpan!");
+      }
+
+    } catch(err) {
+      console.error(err);
+      showToast("Ralat semasa menyimpan laporan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClear = () => {
+    setForm(INITIAL_FORM);
+    setEditingId(null);
+  };
+
+  // --- DOWNLOAD DIRECT PDF LOGIC ---
+  const handleDownloadPDF = () => {
+    setGeneratingPDF(true);
+    showToast("Sedang menjana fail PDF, sila tunggu sebentar...");
+    
+    const element = document.getElementById('pdf-content');
+    
+    const opt = {
+      margin:       [10, 10, 10, 10], // Top, Left, Bottom, Right
+      filename:     `Laporan_Prep_${form.tarikh || 'Baru'}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const generate = () => {
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        setGeneratingPDF(false);
+        showToast("PDF berjaya dimuat turun!");
+      });
+    };
+
+    if (window.html2pdf) {
+      generate();
+    } else {
+      const script = document.createElement('script');
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.onload = generate;
+      document.body.appendChild(script);
+    }
+  };
+
+  // --- DIRECT GOOGLE SHEETS INTEGRATION (COPY-PASTE METHOD) ---
+  const handleCopyToGoogleSheets = () => {
+    if (reports.length === 0) {
+      showToast("Tiada data untuk disalin.");
+      return;
+    }
+
+    const headers = [
+      "Tarikh", "Hari", "Masa", "Tempat", "Kehadiran", "Guru/Warden", 
+      "Catatan: Kehadiran murid", "Catatan: Kerja sekolah", "Catatan: Membaca",
+      "Catatan: Membawa buku", "Catatan: Disiplin", "Catatan: Kebersihan", 
+      "Catatan: Kesihatan", "Catatan: Kes Khas", "Rumusan", "Disediakan Oleh", "Jawatan"
+    ];
+
+    const cleanText = (str) => {
+      if (!str) return "";
+      // Replace newlines with spaces so it doesn't break Sheet rows
+      return String(str).replace(/\n/g, ' ').replace(/\r/g, ' '); 
+    };
+
+    const rows = reports.map(r => [
+      r.tarikh, r.hari, r.masa, r.tempat, r.kehadiran, r.guru,
+      ...(r.catatan ? r.catatan : Array(8).fill('')),
+      r.rumusan, r.disediakanOlehNama, r.disediakanOlehJawatan
+    ].map(cleanText).join('\t')); // Use Tab to separate columns for Google Sheets
+
+    const tsvContent = [headers.join('\t'), ...rows].join('\n');
+
+    // Cross-browser clipboard copy
+    const textArea = document.createElement("textarea");
+    textArea.value = tsvContent;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast("✅ Berjaya disalin! Sila buka Google Sheets, klik petak A1 dan tekan Ctrl+V (Paste).");
+    } catch (err) {
+      showToast("❌ Gagal menyalin data. Sila gunakan fungsi Eksport CSV.");
+    }
+    document.body.removeChild(textArea);
+  };
+
+  // --- Archive Logic ---
+  const loadReport = (report) => {
+    setForm({
+      hari: report.hari || '',
+      tarikh: report.tarikh || '',
+      masa: report.masa || '',
+      tempat: report.tempat || '',
+      kehadiran: report.kehadiran || '',
+      guru: report.guru || '',
+      catatan: report.catatan || Array(8).fill(''),
+      rumusan: report.rumusan || '',
+      disediakanOlehNama: report.disediakanOlehNama || '',
+      disediakanOlehJawatan: report.disediakanOlehJawatan || ''
+    });
+    setEditingId(report.id);
+    setTab('form');
+    showToast("Laporan dimuatkan untuk disunting.");
+  };
+
+  const triggerDelete = (id) => setConfirmDialog({ isOpen: true, idToDelete: id });
+
+  const executeDelete = async () => {
+    if (!confirmDialog.idToDelete || !db) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'laporan_prep', confirmDialog.idToDelete));
+      showToast("Laporan berjaya dipadam.");
+    } catch(err) {
+      console.error(err);
+      showToast("Ralat memadam laporan.");
+    }
+    setConfirmDialog({ isOpen: false, idToDelete: null });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* --- Navigation & Header --- */}
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <h1 className="text-2xl font-bold text-blue-900 flex items-center gap-3">
+            <FileText className="text-blue-600" /> Sistem Laporan Prep
+          </h1>
+          <div className="flex gap-2 mt-4 md:mt-0">
+            <button onClick={() => setTab('form')} className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition ${tab === 'form' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              <FileText size={18} /> Borang
+            </button>
+            <button onClick={() => setTab('archive')} className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition ${tab === 'archive' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              <Archive size={18} /> Arkib Laporan
+            </button>
+            <button onClick={() => setShowSettings(true)} className="px-3 py-2.5 rounded-xl font-medium flex items-center gap-2 transition bg-slate-800 text-white hover:bg-slate-700 shadow-md" title="Tetapan Auto Google Sheets">
+              <Settings size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* --- Settings Modal --- */}
+        {showSettings && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Settings className="text-slate-700" /> Tetapan Auto Google Sheets
+                </h3>
+                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-red-500 transition">
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="bg-blue-50 text-blue-900 p-4 rounded-xl text-sm mb-4 border border-blue-200">
+                <p>Bagi membolehkan sistem ini menghantar data secara <b>automatik</b> terus ke dalam fail Google Sheets anda, sila masukkan <b>Web App URL</b> yang telah dijana dari Google Apps Script.</p>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Paste URL (https://script.google.com/macros/s/...)" 
+                className="w-full border border-slate-300 rounded-xl p-3 mb-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                value={gasUrl}
+                onChange={(e) => setGasUrl(e.target.value)}
+              />
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowSettings(false)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition">
+                  Batal
+                </button>
+                <button onClick={() => {
+                  localStorage.setItem('gasUrl', gasUrl);
+                  setShowSettings(false);
+                  showToast("Tetapan URL berjaya disimpan! Auto-Sync kini aktif.");
+                }} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition shadow-md">
+                  Simpan Tetapan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- Toast Notifications --- */}
+        {toast && (
+          <div className="fixed top-6 right-6 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 z-50 animate-bounce">
+            <CheckCircle size={24} className="text-green-400" /> <span className="font-medium">{toast}</span>
+          </div>
+        )}
+
+        {/* --- Confirm Delete Dialog --- */}
+        {confirmDialog.isOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+              <h3 className="text-xl font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <AlertCircle className="text-red-500" /> Sahkan Padam
+              </h3>
+              <p className="text-slate-600 mb-8 leading-relaxed">Adakah anda pasti mahu memadam laporan ini? Ia tidak boleh dipulihkan.</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setConfirmDialog({isOpen: false, idToDelete: null})} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition">
+                  Batal
+                </button>
+                <button onClick={executeDelete} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition shadow-md shadow-red-200">
+                  Ya, Padam
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === TAB: FORM === */}
+        {tab === 'form' && (
+          <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8 relative border border-slate-200">
+            
+            {/* Form Action Buttons */}
+            <div className="mb-6 flex flex-wrap gap-3 justify-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+              {editingId && (
+                <button onClick={handleClear} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-4 py-2 rounded-xl shadow-sm flex items-center gap-2 transition font-medium">
+                  Batal Edit
+                </button>
+              )}
+              {/* NEW PDF DOWNLOAD BUTTON */}
+              <button onClick={handleDownloadPDF} disabled={generatingPDF} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium disabled:opacity-50">
+                <FileDown size={18} /> {generatingPDF ? 'Menjana PDF...' : 'Muat Turun PDF'}
+              </button>
+              <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-2 transition font-medium disabled:opacity-50">
+                <Save size={18} /> {saving ? 'Menyimpan...' : 'Simpan ke Arkib'}
+              </button>
+            </div>
+
+            {/* --- THIS DIV WILL BE CAPTURED AS PDF --- */}
+            <div id="pdf-content" className="bg-white text-black p-2 md:p-4">
+              
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold uppercase text-black tracking-wider">Laporan Prep Asrama</h1>
+                <h2 className="text-xl font-bold uppercase text-gray-800 mt-1">SK Pendidikan Khas Kuantan</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Hari</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <select className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.hari} onChange={(e) => updateForm('hari', e.target.value)}>
+                    <option value="">Pilih</option>
+                    <option value="Isnin">Isnin</option><option value="Selasa">Selasa</option>
+                    <option value="Rabu">Rabu</option><option value="Khamis">Khamis</option>
+                    <option value="Jumaat">Jumaat</option><option value="Sabtu">Sabtu</option>
+                    <option value="Ahad">Ahad</option>
+                  </select>
+                </div>
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Tempat</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="text" className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.tempat} onChange={(e) => updateForm('tempat', e.target.value)} />
+                </div>
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Tarikh</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="date" className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.tarikh} onChange={(e) => updateForm('tarikh', e.target.value)} />
+                </div>
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Kehadiran</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="text" placeholder="Cth: 40/45" className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.kehadiran} onChange={(e) => updateForm('kehadiran', e.target.value)} />
+                </div>
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Masa</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="time" className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.masa} onChange={(e) => updateForm('masa', e.target.value)} />
+                </div>
+                <div className="flex items-center">
+                  <label className="w-32 font-bold uppercase text-sm">Guru Bertugas</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="text" className="flex-1 border-b border-gray-400 focus:border-blue-600 outline-none py-1 bg-transparent" value={form.guru} onChange={(e) => updateForm('guru', e.target.value)} />
+                </div>
+              </div>
+
+              <table className="w-full border-collapse border border-black mb-8">
+                <thead>
+                  <tr className="bg-blue-900 text-white print:bg-blue-900 print:text-white" style={{backgroundColor: '#1e3a8a', color: 'white', WebkitPrintColorAdjust: 'exact'}}>
+                    <th className="border border-black p-3 w-12 text-center font-bold text-sm">BIL</th>
+                    <th className="border border-black p-3 text-center font-bold uppercase text-sm">Perkara Pemantauan</th>
+                    <th className="border border-black p-3 w-[45%] text-center font-bold uppercase text-sm">Catatan / Tindakan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ITEMS.map((item, index) => (
+                    <tr key={index}>
+                      <td className="border border-black p-3 text-center font-bold text-sm align-top">{index + 1}</td>
+                      <td className="border border-black p-3 text-sm font-medium leading-snug align-top">{item}</td>
+                      <td className="border border-black p-0 align-top">
+                        <textarea 
+                          className="w-full h-full min-h-[60px] p-3 outline-none resize-none bg-transparent overflow-hidden text-sm"
+                          value={form.catatan[index] || ''}
+                          onChange={(e) => updateCatatan(index, e.target.value)}
+                          onInput={autoResize}
+                          placeholder="Taip di sini..."
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="border border-black p-4 mb-8">
+                <label className="font-bold uppercase text-sm block mb-2">Rumusan / Catatan Am:</label>
+                <textarea 
+                  className="w-full min-h-[80px] border-none outline-none resize-none bg-transparent overflow-hidden text-sm" 
+                  placeholder="Taipkan rumusan atau catatan am di sini..."
+                  value={form.rumusan}
+                  onChange={(e) => updateForm('rumusan', e.target.value)}
+                  onInput={autoResize}
+                />
+              </div>
+
+              <div className="mt-8 mb-4 break-inside-avoid">
+                <p className="font-bold text-sm mb-6 uppercase">Disediakan oleh:</p>
+                <div className="flex items-end mb-3">
+                  <label className="w-20 font-bold text-sm">Nama</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="text" className="border-b border-black outline-none w-64 bg-transparent text-sm" value={form.disediakanOlehNama} onChange={(e) => updateForm('disediakanOlehNama', e.target.value)}/>
+                </div>
+                <div className="flex items-end">
+                  <label className="w-20 font-bold text-sm">Jawatan</label>
+                  <span className="mr-2 font-bold">:</span>
+                  <input type="text" className="border-b border-black outline-none w-64 bg-transparent text-sm" value={form.disediakanOlehJawatan} onChange={(e) => updateForm('disediakanOlehJawatan', e.target.value)}/>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* === TAB: ARCHIVE === */}
+        {tab === 'archive' && (
+          <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8 border border-slate-200">
+            
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Archive className="text-blue-600" /> Arkib Laporan
+              </h2>
+              
+              <div className="flex flex-wrap gap-2">
+                {/* NEW GOOGLE SHEETS BUTTON */}
+                <button onClick={handleCopyToGoogleSheets} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition font-medium">
+                  <Copy size={18} /> Salin ke Google Sheets
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 text-green-900 p-5 rounded-xl mb-8 shadow-sm">
+              <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
+                <CheckCircle size={20} /> Cara Mudah Masukkan Ke Google Sheets:
+              </h3>
+              <ol className="list-decimal pl-5 text-sm space-y-1.5">
+                <li>Klik butang <span className="font-bold">"Salin ke Google Sheets"</span> berwarna hijau di atas.</li>
+                <li>Buka fail <span className="font-bold text-green-700">Google Sheets</span> anda.</li>
+                <li>Klik pada petak pertama (contoh: Petak A1).</li>
+                <li>Tekan butang <span className="font-bold bg-white px-1 border border-gray-300 rounded">Ctrl</span> + <span className="font-bold bg-white px-1 border border-gray-300 rounded">V</span> (Atau Right Click &gt; Paste). Selesai! Semua data akan terus tersusun cantik dalam petak.</li>
+              </ol>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    <th className="p-4 font-bold text-slate-700 text-sm">Tarikh</th>
+                    <th className="p-4 font-bold text-slate-700 text-sm">Hari</th>
+                    <th className="p-4 font-bold text-slate-700 text-sm">Guru Bertugas</th>
+                    <th className="p-4 font-bold text-slate-700 text-sm">Kehadiran</th>
+                    <th className="p-4 font-bold text-slate-700 text-sm text-right">Tindakan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-slate-500 font-medium">Tiada data di dalam arkib.</td>
+                    </tr>
+                  ) : (
+                    reports.map(r => (
+                      <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td className="p-4 font-medium text-slate-800">{r.tarikh || '-'}</td>
+                        <td className="p-4 text-slate-600">{r.hari || '-'}</td>
+                        <td className="p-4 text-slate-800 font-medium">{r.guru || '-'}</td>
+                        <td className="p-4 text-slate-600">{r.kehadiran || '-'}</td>
+                        <td className="p-4 text-right flex justify-end gap-2">
+                           <button onClick={() => loadReport(r)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition" title="Papar & Edit">
+                             <Edit size={18} />
+                           </button>
+                           <button onClick={() => triggerDelete(r.id)} className="text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="Padam Laporan">
+                             <Trash2 size={18} />
+                           </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
