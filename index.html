@@ -345,9 +345,12 @@
 
                 let html = '';
                 records.forEach((r, index) => {
-                    // Buang format masa tambahan pada hujung tarikh jika ada (contoh: 2023-10-10T15:00:00.000Z)
+                    // Betulkan isu Zon Masa Malaysia untuk senarai Arkib
                     let cleanDate = r.tarikh || '-';
-                    if(cleanDate.includes('T')) cleanDate = cleanDate.split('T')[0];
+                    if(cleanDate.includes('T')) {
+                        let d = new Date(cleanDate);
+                        cleanDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                    }
 
                     html += `
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
@@ -374,14 +377,27 @@
             const r = globalRecords[index];
             if (!r) return;
 
-            // Pembersihan Tarikh
+            // Pembersihan Tarikh (Selesaikan isu tarikh lari 1 hari - Zon Masa Malaysia)
             let rawTarikh = r.tarikh || '';
-            if (rawTarikh.includes('T')) rawTarikh = rawTarikh.split('T')[0];
+            if (rawTarikh.includes('T')) {
+                let d = new Date(rawTarikh);
+                rawTarikh = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+
+            // Pembersihan Masa (Selesaikan isu masa hilang / format salah)
+            let rawMasa = r.masa || '';
+            if (rawMasa.includes('T')) {
+                let d = new Date(rawMasa);
+                rawMasa = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            } else if (rawMasa && rawMasa.length >= 5) {
+                // Jika format adalah HH:MM:SS, kita ambil HH:MM sahaja
+                rawMasa = rawMasa.substring(0, 5);
+            }
 
             // Assign Data ke Borang Input
             document.getElementById('tarikh').value = rawTarikh;
             document.getElementById('hari').value = r.hari || '';
-            document.getElementById('masa').value = r.masa || '';
+            document.getElementById('masa').value = rawMasa;
             document.getElementById('tempat').value = r.tempat || 'Asrama SK Pendidikan Khas Kuantan';
             document.getElementById('kehadiran').value = r.kehadiran || '';
             document.getElementById('guru').value = r.guru || '';
